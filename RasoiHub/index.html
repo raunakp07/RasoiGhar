@@ -48,9 +48,34 @@
   <p style="margin-bottom:8px;"><i class="fa-solid fa-utensils" style="color:var(--amber)"></i> <strong style="font-family:'Playfair Display',serif;color:var(--amber);margin-left:6px;">RasoiHub</strong></p>
   <p>© 2026 RasoiHub. All rights reserved. Made with <i class="fa-solid fa-heart" style="color:var(--terracotta)"></i> in India.</p>
 </footer>
-<script type="module">
-  import { initNavbar, initTheme } from './js/firebase.js';
-  initNavbar(); initTheme();
+<script>
+  function initNavbar() {
+    const navbar = document.querySelector('.navbar');
+    if (!navbar) return;
+    window.addEventListener('scroll', () => navbar.classList.toggle('scrolled', window.scrollY > 20));
+  }
+
+  function applyTheme(mode) {
+    const thumb = document.getElementById('themeThumb');
+    if (mode === 'light') {
+      document.body.classList.add('light-mode');
+      if (thumb) thumb.textContent = 'SUN';
+    } else {
+      document.body.classList.remove('light-mode');
+      if (thumb) thumb.textContent = 'MOON';
+    }
+    localStorage.setItem('rasoihub-theme', mode);
+  }
+
+  function initTheme() {
+    applyTheme(localStorage.getItem('rasoihub-theme') || 'dark');
+    window.toggleTheme = function() {
+      applyTheme(document.body.classList.contains('light-mode') ? 'dark' : 'light');
+    };
+  }
+
+  initNavbar();
+  initTheme();
 </script>
 </body>
 </html>

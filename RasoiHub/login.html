@@ -34,8 +34,74 @@
     <p class="auth-footer">Don't have an account? <a href="signup.html">Create Account</a></p>
   </div>
 </div>
-<script type="module">
-  import { showToast, redirectIfLoggedIn, initTheme, apiCall } from './js/firebase.js';
+<script>
+  const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:5000/api'
+    : '/api';
+
+  function showToast(message, type = 'info', duration = 3500) {
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.className = 'toast-container';
+      document.body.appendChild(container);
+    }
+    const icons = { success: 'fa-circle-check', error: 'fa-circle-xmark', info: 'fa-circle-info' };
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `<i class="fa-solid ${icons[type] || icons.info} toast-icon"></i><span class="toast-text">${message}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.classList.add('fade-out');
+      toast.addEventListener('animationend', () => toast.remove());
+    }, duration);
+  }
+
+  async function apiCall(endpoint, method = 'GET', body = null) {
+    const token = localStorage.getItem('token');
+    const options = { method, headers: { 'Content-Type': 'application/json' } };
+    if (token) options.headers.Authorization = `Bearer ${token}`;
+    if (body) options.body = JSON.stringify(body);
+    const res = await fetch(`${API_URL}${endpoint}`, options);
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.message || 'API Error');
+    }
+    return res.json();
+  }
+
+  async function redirectIfLoggedIn() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) window.location.href = 'dashboard.html';
+    } catch (_) {
+      localStorage.removeItem('token');
+    }
+  }
+
+  function applyTheme(mode) {
+    const thumb = document.getElementById('themeThumb');
+    if (mode === 'light') {
+      document.body.classList.add('light-mode');
+      if (thumb) thumb.textContent = 'SUN';
+    } else {
+      document.body.classList.remove('light-mode');
+      if (thumb) thumb.textContent = 'MOON';
+    }
+    localStorage.setItem('rasoihub-theme', mode);
+  }
+
+  function initTheme() {
+    applyTheme(localStorage.getItem('rasoihub-theme') || 'dark');
+    window.toggleTheme = function() {
+      applyTheme(document.body.classList.contains('light-mode') ? 'dark' : 'light');
+    };
+  }
+
   redirectIfLoggedIn();
   initTheme();
   window.doLogin = async function() {
