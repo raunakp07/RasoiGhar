@@ -135,6 +135,7 @@
         </div>
         <div class="booking-actions">
           <span class="booking-status ${up?'status-upcoming':'status-past'}"><i class="fa-solid ${up?'fa-circle-check':'fa-clock-rotate-left'}"></i> ${up?'Upcoming':'Past'}</span>
+          <button class="btn-secondary" onclick="openEdit('${b.id}')"><i class="fa-solid fa-pen-to-square"></i></button>
           <button class="btn-danger" onclick="openDelete('${b.id}')"><i class="fa-solid fa-trash"></i></button>
         </div>
       </div>`;
@@ -186,9 +187,29 @@
   };
   window.closeEdit = () => { editId=null; document.getElementById('editModal').classList.add('hidden'); };
   window.doSaveEdit = async function() {
-    // Only status can be updated safely by api logic currently, or we can adjust API. For now, show toast test.
-    showToast('Editing via UI not supported in this version.', 'info');
-    closeEdit();
+    if (!editId) return;
+    const restaurantName = document.getElementById('eRestaurant').value.trim() || 'RasoiHub';
+    const date = document.getElementById('eDate').value;
+    const time = document.getElementById('eTime').value;
+    const guests = parseInt(document.getElementById('eGuests').value, 10);
+    const specialRequests = document.getElementById('eNotes').value.trim();
+    const btn = document.getElementById('saveEditBtn');
+    if (!date || !time || !guests) return showToast('Please fill in date, time, and guests.','error');
+    if (guests < 1 || guests > 100) return showToast('Guests must be between 1 and 100.','error');
+    if (date < today) return showToast('Select today or a future date.','error');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner" style="width:18px;height:18px;border-width:2px;display:inline-block;"></span> Saving...';
+    try {
+      await apiCall(`/bookings/${editId}`, 'PUT', { restaurantName, date, time, guests, specialRequests });
+      showToast('Reservation updated!','success');
+      closeEdit();
+      await loadBookings();
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'Failed to update reservation.','error');
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
   };
 </script>
 </body>

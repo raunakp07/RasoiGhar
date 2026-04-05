@@ -10,19 +10,67 @@ const User = require('./models/User');
 const Booking = require('./models/Booking');
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+const FRONTEND_DIR = path.join(__dirname, '../RasoiHub');
+const isProduction = process.env.NODE_ENV === 'production';
+
+function getAllowedOrigins() {
+  const configuredOrigins = (process.env.CLIENT_ORIGIN || '')
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(Boolean);
+
+  return configuredOrigins.length > 0 ? configuredOrigins : null;
+}
+
+const allowedOrigins = getAllowedOrigins();
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || !allowedOrigins || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error('Origin not allowed by CORS'));
+  }
+}));
+app.use(express.json({ limit: '1mb' }));
 
 // Serve static files from the RasoiHub frontend directory
-app.use(express.static(path.join(__dirname, '../RasoiHub')));
+app.use(express.static(FRONTEND_DIR));
 
 const PORT = process.env.PORT || 5000;
-const JWT_SECRET = process.env.JWT_SECRET || 'rasoihub_secret_key';
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/rasoihub';
+const JWT_SECRET = process.env.JWT_SECRET || (!isProduction ? 'dev-only-jwt-secret' : '');
+const MONGO_URI = process.env.MONGO_URI || (!isProduction ? 'mongodb://127.0.0.1:27017/rasoihub' : '');
 
-mongoose.connect(MONGO_URI)
-  .then(() => console.log('MongoDB connected successfully'))
-  .catch(err => console.error('MongoDB connection error:', err));
+function validateRequiredEnv() {
+  const missing = [];
+
+  if (!MONGO_URI) missing.push('MONGO_URI');
+  if (!JWT_SECRET) missing.push('JWT_SECRET');
+
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+}
+
+function sanitizeName(name = '') {
+  return name.trim().replace(/\s+/g, ' ');
+}
+
+function sanitizeEmail(email = '') {
+  return email.trim().toLowerCase();
+}
+
+function validateBookingInput({ date, time, guests }) {
+  if (!date || !time || !Number.isInteger(guests)) {
+    return 'Date, time, and guests are required.';
+  }
+
+  if (guests < 1 || guests > 100) {
+    return 'Guests must be between 1 and 100.';
+  }
+
+  return null;
+}
 
 // Auth Middleware
 const authMiddleware = (req, res, next) => {
@@ -40,11 +88,29 @@ const authMiddleware = (req, res, next) => {
 
 // --- AUTHENTICATION ROUTES ---
 
+app.get('/api/health', (req, res) => {
+  res.json({
+    ok: true,
+    environment: process.env.NODE_ENV || 'development',
+    databaseState: mongoose.connection.readyState
+  });
+});
+
 // Initial setup helper maybe, but let's just do register
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { name, email, password } = req.body;
-    
+    const name = sanitizeName(req.body.name);
+    const email = sanitizeEmail(req.body.email);
+    const password = req.body.password || '';
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Name, email, and password are required' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
+
     let user = await User.findOne({ email });
     if (user) {
       return res.status(400).json({ message: 'User already exists' });
@@ -73,8 +139,13 @@ app.post('/api/auth/register', async (req, res) => {
 
 app.post('/api/auth/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
-    
+    const email = sanitizeEmail(req.body.email);
+    const password = req.body.password || '';
+
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
+
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: 'Invalid Credentials' });
@@ -113,14 +184,27 @@ app.get('/api/bookings', authMiddleware, async (req, res) => {
 
 app.post('/api/bookings', authMiddleware, async (req, res) => {
   try {
-    const { date, time, guests, specialRequests } = req.body;
+    const {
+      restaurantName = 'RasoiHub',
+      date,
+      time,
+      guests: rawGuests,
+      specialRequests = ''
+    } = req.body;
+    const guests = Number.parseInt(rawGuests, 10);
+    const validationError = validateBookingInput({ date, time, guests });
+
+    if (validationError) {
+      return res.status(400).json({ message: validationError });
+    }
 
     const newBooking = new Booking({
       user: req.user.id,
+      restaurantName: String(restaurantName).trim() || 'RasoiHub',
       date,
       time,
       guests,
-      specialRequests
+      specialRequests: String(specialRequests).trim()
     });
 
     const booking = await newBooking.save();
@@ -148,25 +232,49 @@ app.delete('/api/bookings/:id', authMiddleware, async (req, res) => {
 });
 
 app.put('/api/bookings/:id', authMiddleware, async (req, res) => {
-    try {
-      const { status } = req.body;
-      const booking = await Booking.findById(req.params.id);
-      if (!booking) return res.status(404).json({ msg: 'Booking not found' });
-      
-      // Admin can change status freely; users might only be able to cancel
-      if (req.user.role === 'admin') {
-          booking.status = status || booking.status;
-      } else {
-          if (status === 'Cancelled') {
-              booking.status = 'Cancelled';
-          }
-      }
-  
-      await booking.save();
-      res.json(booking);
-    } catch (err) {
-      res.status(500).send('Server Error');
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ msg: 'Booking not found' });
+
+    if (booking.user.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(401).json({ msg: 'Not authorized' });
     }
+
+    const {
+      restaurantName,
+      date,
+      time,
+      guests: rawGuests,
+      specialRequests,
+      status
+    } = req.body;
+
+    const nextGuests = rawGuests === undefined ? booking.guests : Number.parseInt(rawGuests, 10);
+    const nextDate = date || booking.date;
+    const nextTime = time || booking.time;
+    const validationError = validateBookingInput({ date: nextDate, time: nextTime, guests: nextGuests });
+
+    if (validationError) {
+      return res.status(400).json({ message: validationError });
+    }
+
+    booking.restaurantName = restaurantName === undefined ? booking.restaurantName : (String(restaurantName).trim() || 'RasoiHub');
+    booking.date = nextDate;
+    booking.time = nextTime;
+    booking.guests = nextGuests;
+    booking.specialRequests = specialRequests === undefined ? booking.specialRequests : String(specialRequests).trim();
+
+    if (req.user.role === 'admin' && status) {
+      booking.status = status;
+    } else if (status === 'Cancelled') {
+      booking.status = 'Cancelled';
+    }
+
+    await booking.save();
+    res.json(booking);
+  } catch (err) {
+    res.status(500).send('Server Error');
+  }
 });
 
 app.get('/api/auth/me', authMiddleware, async (req, res) => {
@@ -177,9 +285,68 @@ app.get('/api/auth/me', authMiddleware, async (req, res) => {
     res.status(500).send('Server Error');
   }
 });
-// Catch-all route to serve index.html for any unhandled GET requests
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../RasoiHub/index.html'));
+
+app.put('/api/auth/me', authMiddleware, async (req, res) => {
+  try {
+    const name = sanitizeName(req.body.name);
+
+    if (!name) {
+      return res.status(400).json({ message: 'Name is required' });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { name },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    res.json(user);
+  } catch (err) {
+    res.status(500).send('Server Error');
+  }
 });
 
-app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+app.put('/api/auth/password', authMiddleware, async (req, res) => {
+  try {
+    const currentPassword = req.body.currentPassword || '';
+    const newPassword = req.body.newPassword || '';
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Current password and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters' });
+    }
+
+    const user = await User.findById(req.user.id);
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Current password is incorrect' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (err) {
+    res.status(500).send('Server Error');
+  }
+});
+// Catch-all route to serve index.html for any unhandled GET requests
+app.get(/^(?!\/api).*/, (req, res) => {
+  res.sendFile(path.join(FRONTEND_DIR, 'index.html'));
+});
+
+async function startServer() {
+  validateRequiredEnv();
+  await mongoose.connect(MONGO_URI);
+  console.log('MongoDB connected successfully');
+  app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+}
+
+startServer().catch(err => {
+  console.error('Startup failed:', err.message);
+  process.exit(1);
+});

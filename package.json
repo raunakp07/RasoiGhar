@@ -4,8 +4,9 @@
   "description": "RasoiHub fullstack platform",
   "main": "backend/server.js",
   "scripts": {
+    "dev": "node backend/server.js",
     "start": "node backend/server.js",
-    "install-backend": "cd backend && npm install",
+    "install-backend": "npm install --prefix backend",
     "build": "npm run install-backend"
   },
   "engines": {

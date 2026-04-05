@@ -48,6 +48,7 @@
         </div>
         <div class="profile-card" style="margin-bottom:24px;">
           <h2>Change Password</h2>
+          <div class="input-group no-icon"><label>Current Password</label><input type="password" id="currentPw" placeholder="Enter current password"></div>
           <div class="input-group no-icon"><label>New Password</label><input type="password" id="newPw" placeholder="Min 6 characters"></div>
           <div class="input-group no-icon"><label>Confirm Password</label><input type="password" id="confirmPw" placeholder="Repeat new password"></div>
           <button class="btn-secondary" id="pwBtn" onclick="doChangePassword()"><i class="fa-solid fa-lock"></i> Update Password</button>
@@ -91,11 +92,43 @@
   }
 
   window.doSaveProfile = async function() {
-    showToast('Updating profile is disabled in this MVP.', 'info');
+    const name = document.getElementById('pName').value.trim();
+    const btn = document.getElementById('saveBtn');
+    if (!name) return showToast('Please enter your name.', 'error');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner" style="width:18px;height:18px;border-width:2px;display:inline-block;"></span> Saving...';
+    try {
+      const updatedUser = await apiCall('/auth/me', 'PUT', { name });
+      currentUser = updatedUser;
+      updateSidebar(updatedUser.name || updatedUser.email);
+      document.getElementById('pName').value = updatedUser.name || '';
+      showToast('Profile updated successfully.', 'success');
+    } catch (err) {
+      showToast(err.message || 'Could not update profile.', 'error');
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
   };
 
   window.doChangePassword = async function() {
-    showToast('Changing password is disabled in this MVP.', 'info');
+    const currentPassword = document.getElementById('currentPw').value;
+    const newPassword = document.getElementById('newPw').value;
+    const confirmPassword = document.getElementById('confirmPw').value;
+    const btn = document.getElementById('pwBtn');
+    if (!currentPassword || !newPassword || !confirmPassword) return showToast('Please fill in all password fields.', 'error');
+    if (newPassword.length < 6) return showToast('New password must be at least 6 characters.', 'error');
+    if (newPassword !== confirmPassword) return showToast('Passwords do not match.', 'error');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner" style="width:18px;height:18px;border-width:2px;display:inline-block;"></span> Updating...';
+    try {
+      await apiCall('/auth/password', 'PUT', { currentPassword, newPassword });
+      ['currentPw', 'newPw', 'confirmPw'].forEach(id => { document.getElementById(id).value = ''; });
+      showToast('Password updated successfully.', 'success');
+    } catch (err) {
+      showToast(err.message || 'Could not update password.', 'error');
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-lock"></i> Update Password';
   };
 </script>
 </body>
