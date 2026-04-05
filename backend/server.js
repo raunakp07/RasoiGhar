@@ -39,6 +39,18 @@ app.use(express.json({ limit: '1mb' }));
 // instead of letting them slip into the SPA/document catch-all.
 app.use(express.static(FRONTEND_DIR, { fallthrough: false }));
 
+app.get('/js/:file', (req, res, next) => {
+  res.sendFile(path.join(FRONTEND_DIR, 'js', req.params.file), err => {
+    if (err) next(err);
+  });
+});
+
+app.get('/css/:file', (req, res, next) => {
+  res.sendFile(path.join(FRONTEND_DIR, 'css', req.params.file), err => {
+    if (err) next(err);
+  });
+});
+
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || (!isProduction ? 'dev-only-jwt-secret' : '');
 const MONGO_URI = process.env.MONGO_URI || (!isProduction ? 'mongodb://127.0.0.1:27017/rasoihub' : '');
@@ -362,7 +374,7 @@ app.use((req, res, next) => {
 });
 
 app.use((err, req, res, next) => {
-  if (err?.status === 404 && !req.path.startsWith('/api')) {
+  if ((err?.status === 404 || err?.statusCode === 404) && !req.path.startsWith('/api')) {
     return res.status(404).send('Asset not found');
   }
 
