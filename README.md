@@ -31,6 +31,7 @@ npm start
 
 - `PORT`: Port for the web server.
 - `MONGO_URI`: MongoDB connection string.
+- `MONGO_DB_NAME`: Database name used by the application. Default is `rasoihub`.
 - `JWT_SECRET`: Secret used to sign login tokens.
 - `CLIENT_ORIGIN`: Optional comma-separated list of allowed origins for cross-origin requests.
 - `NODE_ENV`: Use `production` on Render.
@@ -43,7 +44,7 @@ npm start
 2. In Render, choose `New +` -> `Blueprint`.
 3. Select the GitHub repository.
 4. Render will load `render.yaml`.
-5. Add the `MONGO_URI`, `JWT_SECRET`, and `CLIENT_ORIGIN` environment values when prompted.
+5. Add the `MONGO_URI`, `MONGO_DB_NAME`, `JWT_SECRET`, and `CLIENT_ORIGIN` environment values when prompted.
 
 ### Option 2: Manual web service
 
@@ -58,6 +59,7 @@ Set these environment variables:
 
 - `NODE_ENV=production`
 - `MONGO_URI=<your mongodb atlas uri>`
+- `MONGO_DB_NAME=rasoihub`
 - `JWT_SECRET=<long random secret>`
 - `CLIENT_ORIGIN=https://your-render-domain.onrender.com`
 
@@ -74,10 +76,12 @@ mongodb+srv://<username>:<password>@<cluster-url>/rasoihub?retryWrites=true&w=ma
 ```
 
 5. Add that string to Render as `MONGO_URI`.
+6. Set `MONGO_DB_NAME=rasoihub` in Render.
 
 ## Production notes
 
 - The app now requires `MONGO_URI` and `JWT_SECRET` in production.
+- The app targets the `rasoihub` database in production via `MONGO_DB_NAME`.
 - Static frontend files are served by the same Node service, so no separate frontend hosting is required.
 - Users can now update their profile, change their password, create bookings, edit bookings, and delete bookings against MongoDB-backed APIs.
 
