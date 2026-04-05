@@ -54,6 +54,7 @@ app.get('/css/:file', (req, res, next) => {
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || (!isProduction ? 'dev-only-jwt-secret' : '');
 const MONGO_URI = process.env.MONGO_URI || (!isProduction ? 'mongodb://127.0.0.1:27017/rasoihub' : '');
+const MONGO_DB_NAME = process.env.MONGO_DB_NAME || 'rasoihub';
 
 function validateRequiredEnv() {
   const missing = [];
@@ -106,7 +107,8 @@ app.get('/api/health', (req, res) => {
   res.json({
     ok: true,
     environment: process.env.NODE_ENV || 'development',
-    databaseState: mongoose.connection.readyState
+    databaseState: mongoose.connection.readyState,
+    databaseName: mongoose.connection.name || MONGO_DB_NAME
   });
 });
 
@@ -146,8 +148,17 @@ app.post('/api/auth/register', async (req, res) => {
 
     res.json({ token, user: payload });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server error');
+    console.error('Register error:', err);
+
+    if (err?.code === 11000) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+
+    if (err?.name === 'MongoServerError' || err?.name === 'MongooseError') {
+      return res.status(500).json({ message: 'Database error while creating account' });
+    }
+
+    res.status(500).json({ message: 'Server error during registration' });
   }
 });
 
@@ -175,8 +186,13 @@ app.post('/api/auth/login', async (req, res) => {
 
     res.json({ token, user: payload });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server error');
+    console.error('Login error:', err);
+
+    if (err?.name === 'MongoServerError' || err?.name === 'MongooseError') {
+      return res.status(500).json({ message: 'Database error while signing in' });
+    }
+
+    res.status(500).json({ message: 'Server error during login' });
   }
 });
 
@@ -384,7 +400,10 @@ app.use((err, req, res, next) => {
 
 async function startServer() {
   validateRequiredEnv();
-  await mongoose.connect(MONGO_URI);
+  await mongoose.connect(MONGO_URI, {
+    dbName: MONGO_DB_NAME,
+    serverSelectionTimeoutMS: 10000
+  });
   console.log('MongoDB connected successfully');
   app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
 }
