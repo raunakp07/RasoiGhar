@@ -1,17 +1,11 @@
 {
-  "name": "rasoihub",
+  "name": "rasoihub-frontend",
   "version": "1.0.0",
-  "description": "RasoiHub fullstack platform",
-  "main": "backend/server.js",
+  "private": true,
+  "dependencies": {
+    "serve": "^14.2.0"
+  },
   "scripts": {
-    "dev": "node backend/server.js",
-    "start": "node backend/server.js",
-    "install-backend": "npm install --prefix backend",
-    "build": "npm run install-backend"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "author": "",
-  "license": "ISC"
+    "start": "serve -s . -l 10000"
+  }
 }
