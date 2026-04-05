@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In – RasoiHub</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<div class="auth-theme-toggle">
+  <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle theme">
+    <div class="theme-toggle-thumb" id="themeThumb">🌙</div>
+  </button>
+</div>
+<div class="auth-wrapper">
+  <div class="auth-box">
+    <div class="auth-logo"><i class="fa-solid fa-utensils"></i> RasoiHub</div>
+    <h2>Welcome Back</h2>
+    <p class="auth-subtitle">Sign in to manage your reservations</p>
+    <div class="input-group">
+      <i class="fa-solid fa-envelope icon"></i>
+      <input type="email" id="loginEmail" placeholder="Email Address" autocomplete="email">
+    </div>
+    <div class="input-group">
+      <i class="fa-solid fa-lock icon"></i>
+      <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password">
+    </div>
+    <div style="text-align:right;margin-bottom:20px;margin-top:-6px;">
+      <a href="reset.html" style="font-size:0.83rem;color:var(--text-muted);">Forgot password?</a>
+    </div>
+    <button class="btn-primary w-full" id="loginBtn" onclick="doLogin()">
+      <i class="fa-solid fa-right-to-bracket"></i> Sign In
+    </button>
+    <p class="auth-footer">Don't have an account? <a href="signup.html">Create Account</a></p>
+  </div>
+</div>
+<script type="module">
+  import { showToast, redirectIfLoggedIn, initTheme, apiCall } from './js/firebase.js';
+  redirectIfLoggedIn();
+  initTheme();
+  window.doLogin = async function() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass  = document.getElementById('loginPassword').value;
+    const btn   = document.getElementById('loginBtn');
+    if (!email || !pass) return showToast('Please enter email and password.', 'error');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner" style="width:18px;height:18px;border-width:2px;display:inline-block;"></span> Signing in…';
+    try {
+      const res = await apiCall('/auth/login', 'POST', { email, password: pass });
+      localStorage.setItem('token', res.token);
+      showToast('Welcome back!', 'success');
+      setTimeout(() => window.location.href = 'dashboard.html', 800);
+    } catch (err) {
+      showToast(err.message || 'Sign in failed. Try again.', 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Sign In';
+    }
+  };
+  document.addEventListener('keydown', e => { if (e.key === 'Enter') window.doLogin(); });
+</script>
+</body>
+</html>

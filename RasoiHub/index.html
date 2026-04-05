@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RasoiHub – Reserve Your Perfect Table</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<nav class="navbar" id="navbar">
+  <div class="logo"><i class="fa-solid fa-utensils"></i> RasoiHub</div>
+  <div class="nav-links">
+    <a href="login.html">Sign In</a>
+    <a href="signup.html" class="nav-cta">Get Started</a>
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle theme">
+      <div class="theme-toggle-thumb" id="themeThumb">🌙</div>
+    </button>
+  </div>
+</nav>
+<header class="hero">
+  <div class="hero-eyebrow"><i class="fa-solid fa-star"></i> India's Premium Table Booking Platform</div>
+  <h1>Reserve Your<br><em style="font-style:italic;color:var(--amber);">Perfect</em> Table</h1>
+  <p>Seamlessly book tables at top restaurants. Manage reservations, track dining history, and enjoy every meal without the wait.</p>
+  <div class="hero-actions">
+    <a href="signup.html" class="btn-primary"><i class="fa-solid fa-arrow-right"></i> Get Started Free</a>
+    <a href="login.html" class="btn-secondary">Sign In</a>
+  </div>
+</header>
+<section class="features-section">
+  <div class="section-header"><h2>Everything You Need</h2><p>A complete restaurant booking experience built for discerning diners.</p></div>
+  <div class="feature-grid">
+    <div class="card"><div class="card-icon"><i class="fa-solid fa-calendar-check"></i></div><h3>Instant Reservations</h3><p>Book tables in seconds with date, time, guest count, and instant confirmation.</p></div>
+    <div class="card"><div class="card-icon"><i class="fa-solid fa-gauge-high"></i></div><h3>Smart Dashboard</h3><p>Total bookings, guest statistics, and upcoming reservations at a glance.</p></div>
+    <div class="card"><div class="card-icon"><i class="fa-solid fa-shield-halved"></i></div><h3>Secure & Reliable</h3><p>Powered by Firebase. Your data is encrypted and accessible from any device.</p></div>
+    <div class="card"><div class="card-icon"><i class="fa-solid fa-user-gear"></i></div><h3>Profile Management</h3><p>Update your details and manage bookings efficiently.</p></div>
+    <div class="card"><div class="card-icon"><i class="fa-solid fa-clock-rotate-left"></i></div><h3>Booking History</h3><p>Full history of every reservation — filter upcoming and past bookings.</p></div>
+    <div class="card"><div class="card-icon"><i class="fa-solid fa-mobile-screen"></i></div><h3>Works Everywhere</h3><p>Fully responsive on desktop, tablet, and mobile devices.</p></div>
+  </div>
+</section>
+<section style="padding:60px clamp(24px,8vw,120px);text-align:center;">
+  <div style="background:linear-gradient(135deg,rgba(232,164,80,0.1),rgba(192,97,74,0.08));border:1px solid var(--border);border-radius:var(--radius-xl);padding:clamp(48px,6vw,80px) clamp(24px,8vw,80px);">
+    <h2 style="margin-bottom:14px;">Ready to Dine Better?</h2>
+    <p style="color:var(--text-secondary);margin-bottom:32px;max-width:440px;margin-left:auto;margin-right:auto;">Join thousands of diners using RasoiHub for effortless reservations.</p>
+    <a href="signup.html" class="btn-primary" style="font-size:1rem;padding:15px 36px;">Create Free Account <i class="fa-solid fa-arrow-right"></i></a>
+  </div>
+</section>
+<footer>
+  <p style="margin-bottom:8px;"><i class="fa-solid fa-utensils" style="color:var(--amber)"></i> <strong style="font-family:'Playfair Display',serif;color:var(--amber);margin-left:6px;">RasoiHub</strong></p>
+  <p>© 2026 RasoiHub. All rights reserved. Made with <i class="fa-solid fa-heart" style="color:var(--terracotta)"></i> in India.</p>
+</footer>
+<script type="module">
+  import { initNavbar, initTheme } from './js/firebase.js';
+  initNavbar(); initTheme();
+</script>
+</body>
+</html>

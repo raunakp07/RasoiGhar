@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Account – RasoiHub</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<div class="auth-theme-toggle">
+  <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle theme">
+    <div class="theme-toggle-thumb" id="themeThumb">🌙</div>
+  </button>
+</div>
+<div class="auth-wrapper">
+  <div class="auth-box">
+    <div class="auth-logo"><i class="fa-solid fa-utensils"></i> RasoiHub</div>
+    <h2>Create Account</h2>
+    <p class="auth-subtitle">Join RasoiHub and start booking tables effortlessly</p>
+    <div class="input-group"><i class="fa-solid fa-user icon"></i><input type="text" id="signupName" placeholder="Full Name" autocomplete="name"></div>
+    <div class="input-group"><i class="fa-solid fa-envelope icon"></i><input type="email" id="signupEmail" placeholder="Email Address" autocomplete="email"></div>
+    <div class="input-group"><i class="fa-solid fa-lock icon"></i><input type="password" id="signupPassword" placeholder="Password (min 6 chars)"></div>
+    <div class="input-group"><i class="fa-solid fa-lock icon"></i><input type="password" id="signupConfirm" placeholder="Confirm Password"></div>
+    <button class="btn-primary w-full mt-8" id="signupBtn" onclick="doSignup()">
+      <i class="fa-solid fa-user-plus"></i> Create Account
+    </button>
+    <p class="auth-footer">Already have an account? <a href="login.html">Sign In</a></p>
+  </div>
+</div>
+<script type="module">
+  import { showToast, redirectIfLoggedIn, initTheme, apiCall } from './js/firebase.js';
+  redirectIfLoggedIn();
+  initTheme();
+  window.doSignup = async function() {
+    const name    = document.getElementById('signupName').value.trim();
+    const email   = document.getElementById('signupEmail').value.trim();
+    const pass    = document.getElementById('signupPassword').value;
+    const confirm = document.getElementById('signupConfirm').value;
+    const btn     = document.getElementById('signupBtn');
+    if (!name || !email || !pass || !confirm) return showToast('Please fill in all fields.', 'error');
+    if (pass.length < 6)  return showToast('Password must be at least 6 characters.', 'error');
+    if (pass !== confirm) return showToast('Passwords do not match.', 'error');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner" style="width:18px;height:18px;border-width:2px;display:inline-block;"></span> Creating…';
+    try {
+      const res = await apiCall('/auth/register', 'POST', { name, email, password: pass });
+      localStorage.setItem('token', res.token);
+      showToast('Account created! Redirecting…', 'success');
+      setTimeout(() => window.location.href = 'dashboard.html', 1200);
+    } catch (err) {
+      showToast(err.message || 'Signup failed. Try again.', 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Create Account';
+    }
+  };
+  document.addEventListener('keydown', e => { if (e.key === 'Enter') window.doSignup(); });
+</script>
+</body>
+</html>

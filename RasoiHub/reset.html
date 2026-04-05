@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset Password – RasoiHub</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<div class="auth-theme-toggle">
+  <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle theme">
+    <div class="theme-toggle-thumb" id="themeThumb">🌙</div>
+  </button>
+</div>
+<div class="auth-wrapper">
+  <div class="auth-box">
+    <div class="auth-logo"><i class="fa-solid fa-utensils"></i> RasoiHub</div>
+    <h2>Reset Password</h2>
+    <p class="auth-subtitle">Enter your email and we'll send a reset link</p>
+    <div class="input-group"><i class="fa-solid fa-envelope icon"></i><input type="email" id="resetEmail" placeholder="Email Address"></div>
+    <button class="btn-primary w-full mt-8" id="resetBtn" onclick="doReset()">
+      <i class="fa-solid fa-paper-plane"></i> Send Reset Link
+    </button>
+    <p class="auth-footer">Remember your password? <a href="login.html">Sign In</a></p>
+  </div>
+</div>
+<script type="module">
+  import { showToast, initTheme } from './js/firebase.js';
+  initTheme();
+  window.doReset = async function() {
+    showToast('Resetting passwords is disabled in this MVP.', 'info');
+  };
+</script>
+</body>
+</html>

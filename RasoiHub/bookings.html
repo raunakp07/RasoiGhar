@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bookings – RasoiHub</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<div class="loader-overlay" id="loader">
+  <div class="loader-logo"><i class="fa-solid fa-utensils"></i> RasoiHub</div>
+  <div class="spinner"></div>
+</div>
+<nav class="navbar" id="navbar">
+  <div class="logo"><i class="fa-solid fa-utensils"></i> RasoiHub</div>
+  <div class="nav-links">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="bookings.html" class="active">Bookings</a>
+    <a href="profile.html">Profile</a>
+    <a href="#" onclick="doLogout()" class="nav-cta">Logout</a>
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle theme">
+      <div class="theme-toggle-thumb" id="themeThumb">🌙</div>
+    </button>
+  </div>
+</nav>
+<div class="page-wrapper">
+  <div class="page-header"><h1>Reservations</h1><p>Create and manage all your restaurant bookings.</p></div>
+  <div class="page-content">
+    <div class="form-box" style="margin-bottom:40px;">
+      <h2 style="font-size:1.3rem;margin-bottom:6px;">New Reservation</h2>
+      <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:24px;">Fill in the details to reserve your table.</p>
+      <div class="input-group"><i class="fa-solid fa-store icon"></i><input type="text" id="bRestaurant" placeholder="Restaurant Name" maxlength="80"></div>
+      <div class="form-row">
+        <div class="input-group"><i class="fa-solid fa-calendar icon"></i><input type="date" id="bDate"></div>
+        <div class="input-group"><i class="fa-solid fa-clock icon"></i><input type="time" id="bTime"></div>
+      </div>
+      <div class="input-group"><i class="fa-solid fa-users icon"></i><input type="number" id="bGuests" placeholder="Number of Guests" min="1" max="100"></div>
+      <div class="input-group"><i class="fa-solid fa-comment icon"></i><input type="text" id="bNotes" placeholder="Special requests (optional)" maxlength="200"></div>
+      <button class="btn-primary" id="createBtn" onclick="doCreate()"><i class="fa-solid fa-plus"></i> Create Reservation</button>
+    </div>
+    <div>
+      <div class="flex items-center justify-between" style="margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+        <h2 style="font-size:1.3rem;">Your Bookings</h2>
+        <div class="filter-tabs">
+          <button class="filter-tab active" onclick="doFilter('all',this)">All</button>
+          <button class="filter-tab" onclick="doFilter('upcoming',this)">Upcoming</button>
+          <button class="filter-tab" onclick="doFilter('past',this)">Past</button>
+        </div>
+      </div>
+      <div id="bookingsList" style="display:flex;flex-direction:column;gap:14px;">
+        <div class="skeleton" style="height:90px;border-radius:var(--radius-lg);"></div>
+        <div class="skeleton" style="height:90px;border-radius:var(--radius-lg);"></div>
+        <div class="skeleton" style="height:90px;border-radius:var(--radius-lg);"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="deleteModal">
+  <div class="modal-box">
+    <h2><i class="fa-solid fa-triangle-exclamation" style="color:var(--terracotta);margin-right:10px;"></i>Delete Reservation</h2>
+    <p>Are you sure? This cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeDelete()">Cancel</button>
+      <button class="btn-danger" style="padding:12px 24px;" id="confirmDeleteBtn" onclick="doDelete()"><i class="fa-solid fa-trash"></i> Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="editModal">
+  <div class="modal-box">
+    <h2><i class="fa-solid fa-pen-to-square" style="color:var(--amber);margin-right:10px;"></i>Edit Reservation</h2>
+    <p>Update the details for this reservation.</p>
+    <div class="input-group"><i class="fa-solid fa-store icon"></i><input type="text" id="eRestaurant" placeholder="Restaurant Name"></div>
+    <div class="form-row">
+      <div class="input-group"><i class="fa-solid fa-calendar icon"></i><input type="date" id="eDate"></div>
+      <div class="input-group"><i class="fa-solid fa-clock icon"></i><input type="time" id="eTime"></div>
+    </div>
+    <div class="input-group"><i class="fa-solid fa-users icon"></i><input type="number" id="eGuests" min="1" max="100"></div>
+    <div class="input-group"><i class="fa-solid fa-comment icon"></i><input type="text" id="eNotes" placeholder="Special requests"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeEdit()">Cancel</button>
+      <button class="btn-primary" id="saveEditBtn" onclick="doSaveEdit()"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { showToast, requireAuth, logout, initNavbar, setActiveNav, formatDate, formatTime, isUpcoming, initTheme, apiCall } from './js/firebase.js';
+  initTheme(); initNavbar(); setActiveNav();
+  window.doLogout = logout;
+  let currentUser=null, allBookings=[], deleteId=null, editId=null, currentFilter='all';
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('bDate').min = today;
+  document.getElementById('eDate').min = today;
+
+  requireAuth(async user => {
+    currentUser = user;
+    await loadBookings();
+    const loader = document.getElementById('loader');
+    loader.classList.add('hidden');
+    setTimeout(() => loader.remove(), 500);
+  });
+
+  async function loadBookings() {
+    try {
+      const snap = await apiCall('/bookings', 'GET');
+      // The API returns bookings sorted. 
+      allBookings = snap.map(d => ({ id: d._id, ...d })); // map _id to id for existing logic
+      renderBookings(currentFilter);
+    } catch(err) { console.error(err); document.getElementById('bookingsList').innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-exclamation"></i><h3>Could not load</h3><p>Server error.</p></div>`; }
+  }
+
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function renderBookings(filter) {
+    const list = allBookings.filter(b => filter==='upcoming'?isUpcoming(b.date):filter==='past'?!isUpcoming(b.date):true);
+    const el = document.getElementById('bookingsList');
+    if (list.length === 0) {
+      el.innerHTML = `<div class="empty-state"><i class="fa-solid fa-calendar-xmark"></i><h3>No ${filter!=='all'?filter+' ':''}bookings</h3><p>${filter==='upcoming'?'Create a reservation above.':'No past reservations.'}</p></div>`;
+      return;
+    }
+    el.innerHTML = list.map((b,i) => {
+      const up = isUpcoming(b.date);
+      return `<div class="booking-card" style="animation-delay:${i*0.06}s">
+        <div class="booking-info">
+          <div class="booking-restaurant">${esc(b.restaurantName || 'RasoiHub')}</div>
+          <div class="booking-meta">
+            <div class="booking-meta-item"><i class="fa-solid fa-calendar"></i> ${formatDate(b.date)}</div>
+            <div class="booking-meta-item"><i class="fa-solid fa-clock"></i> ${formatTime(b.time)}</div>
+            <div class="booking-meta-item"><i class="fa-solid fa-users"></i> ${b.guests} guest${b.guests==1?'':'s'}</div>
+            ${b.specialRequests?`<div class="booking-meta-item"><i class="fa-solid fa-comment"></i> ${esc(b.specialRequests)}</div>`:''}
+            <div class="booking-meta-item"><i class="fa-solid fa-info-circle"></i> Status: ${b.status}</div>
+          </div>
+        </div>
+        <div class="booking-actions">
+          <span class="booking-status ${up?'status-upcoming':'status-past'}"><i class="fa-solid ${up?'fa-circle-check':'fa-clock-rotate-left'}"></i> ${up?'Upcoming':'Past'}</span>
+          <button class="btn-danger" onclick="openDelete('${b.id}')"><i class="fa-solid fa-trash"></i></button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  window.doFilter = function(filter,btn) { currentFilter=filter; document.querySelectorAll('.filter-tab').forEach(t=>t.classList.remove('active')); btn.classList.add('active'); renderBookings(filter); };
+
+  window.doCreate = async function() {
+    const restaurantName = document.getElementById('bRestaurant').value.trim() || 'RasoiHub';
+    const date = document.getElementById('bDate').value;
+    const time = document.getElementById('bTime').value;
+    const guests = parseInt(document.getElementById('bGuests').value);
+    const specialRequests = document.getElementById('bNotes').value.trim();
+    const btn = document.getElementById('createBtn');
+    if (!date||!time||!guests) return showToast('Please fill in date, time, and guests.','error');
+    if (guests<1||guests>100) return showToast('Guests must be 1–100.','error');
+    if (date < today) return showToast('Select today or a future date.','error');
+    btn.disabled=true; btn.innerHTML='<span class="spinner" style="width:18px;height:18px;border-width:2px;display:inline-block;"></span> Creating…';
+    try {
+      await apiCall('/bookings', 'POST', { restaurantName, date, time, guests, specialRequests });
+      showToast('Reservation created!','success');
+      ['bRestaurant','bDate','bTime','bGuests','bNotes'].forEach(id=>document.getElementById(id).value='');
+      await loadBookings();
+    } catch(err) { console.error(err); showToast('Failed to create booking.','error'); }
+    btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-plus"></i> Create Reservation';
+  };
+
+  window.openDelete = id => { deleteId=id; document.getElementById('deleteModal').classList.remove('hidden'); };
+  window.closeDelete = () => { deleteId=null; document.getElementById('deleteModal').classList.add('hidden'); };
+  window.doDelete = async function() {
+    if (!deleteId) return;
+    const btn = document.getElementById('confirmDeleteBtn');
+    btn.disabled=true; btn.innerHTML='<span class="spinner" style="width:16px;height:16px;border-width:2px;display:inline-block;"></span>';
+    try { await apiCall(`/bookings/${deleteId}`, 'DELETE'); showToast('Reservation deleted.','info'); closeDelete(); await loadBookings(); }
+    catch { showToast('Failed to delete.','error'); }
+    btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-trash"></i> Delete';
+  };
+
+  // We are skipping edit for MVP or could wire it up to PUT /bookings/:id (we removed edit logic from card to simplify, but modals are there just in case)
+  window.openEdit = function(id) {
+    editId=id; const b=allBookings.find(x=>x.id===id); if(!b) return;
+    document.getElementById('eRestaurant').value=b.restaurantName || '';
+    document.getElementById('eDate').value=b.date;
+    document.getElementById('eTime').value=b.time;
+    document.getElementById('eGuests').value=b.guests;
+    document.getElementById('eNotes').value=b.specialRequests||'';
+    document.getElementById('editModal').classList.remove('hidden');
+  };
+  window.closeEdit = () => { editId=null; document.getElementById('editModal').classList.add('hidden'); };
+  window.doSaveEdit = async function() {
+    // Only status can be updated safely by api logic currently, or we can adjust API. For now, show toast test.
+    showToast('Editing via UI not supported in this version.', 'info');
+    closeEdit();
+  };
+</script>
+</body>
+</html>

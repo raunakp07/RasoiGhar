@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile – RasoiHub</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<div class="loader-overlay" id="loader">
+  <div class="loader-logo"><i class="fa-solid fa-utensils"></i> RasoiHub</div>
+  <div class="spinner"></div>
+</div>
+<nav class="navbar" id="navbar">
+  <div class="logo"><i class="fa-solid fa-utensils"></i> RasoiHub</div>
+  <div class="nav-links">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="bookings.html">Bookings</a>
+    <a href="profile.html" class="active">Profile</a>
+    <a href="#" onclick="doLogout()" class="nav-cta">Logout</a>
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle theme">
+      <div class="theme-toggle-thumb" id="themeThumb">🌙</div>
+    </button>
+  </div>
+</nav>
+<div class="page-wrapper">
+  <div class="page-header"><h1>My Profile</h1><p>Manage your account information.</p></div>
+  <div class="page-content">
+    <div class="profile-layout">
+      <div class="profile-sidebar">
+        <div class="avatar-ring" id="avatarRing">?</div>
+        <h3 id="sidebarName">Loading…</h3>
+        <p class="email" id="sidebarEmail">–</p>
+        <span class="badge"><i class="fa-solid fa-circle" style="font-size:7px"></i> Active Member</span>
+        <div style="margin-top:28px;text-align:left;">
+          <div class="stat-row"><span>Member Since</span><span id="memberSince">–</span></div>
+          <div class="stat-row"><span>Total Bookings</span><span id="sidebarBookings">–</span></div>
+          <div class="stat-row"><span>Upcoming</span><span id="sidebarUpcoming">–</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="profile-card" style="margin-bottom:24px;">
+          <h2>Account Information</h2>
+          <div class="input-group no-icon"><label>Full Name</label><input type="text" id="pName" placeholder="Your full name"></div>
+          <div class="input-group no-icon"><label>Email Address</label><input type="email" id="pEmail" disabled style="opacity:0.5;cursor:not-allowed;"></div>
+          <p style="color:var(--text-muted);font-size:0.82rem;margin-bottom:20px;"><i class="fa-solid fa-info-circle"></i> Email cannot be changed.</p>
+          <button class="btn-primary" id="saveBtn" onclick="doSaveProfile()"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+        </div>
+        <div class="profile-card" style="margin-bottom:24px;">
+          <h2>Change Password</h2>
+          <div class="input-group no-icon"><label>New Password</label><input type="password" id="newPw" placeholder="Min 6 characters"></div>
+          <div class="input-group no-icon"><label>Confirm Password</label><input type="password" id="confirmPw" placeholder="Repeat new password"></div>
+          <button class="btn-secondary" id="pwBtn" onclick="doChangePassword()"><i class="fa-solid fa-lock"></i> Update Password</button>
+        </div>
+        <div class="danger-zone">
+          <h3><i class="fa-solid fa-triangle-exclamation"></i> Danger Zone</h3>
+          <p>Sign out from RasoiHub on this device.</p>
+          <button class="btn-danger" onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i> Sign Out</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script type="module">
+  import { showToast, requireAuth, logout, initNavbar, setActiveNav, isUpcoming, initTheme, apiCall } from './js/firebase.js';
+  initTheme(); initNavbar(); setActiveNav();
+  window.doLogout = logout;
+  let currentUser = null;
+
+  requireAuth(async user => {
+    currentUser = user;
+    document.getElementById('pName').value  = user.name || '';
+    document.getElementById('pEmail').value = user.email || '';
+    document.getElementById('sidebarEmail').textContent = user.email || '–';
+    updateSidebar(user.name || user.email);
+    const c = user.createdAt || Date.now();
+    if (c) document.getElementById('memberSince').textContent = new Date(c).toLocaleDateString('en-IN',{month:'short',year:'numeric'});
+    try {
+      const bookings = await apiCall('/bookings', 'GET');
+      document.getElementById('sidebarBookings').textContent = bookings.length;
+      document.getElementById('sidebarUpcoming').textContent = bookings.filter(b=>isUpcoming(b.date)).length;
+    } catch(_) {}
+    const loader = document.getElementById('loader');
+    loader.classList.add('hidden');
+    setTimeout(() => loader.remove(), 500);
+  });
+
+  function updateSidebar(name) {
+    document.getElementById('sidebarName').textContent = name||'–';
+    document.getElementById('avatarRing').textContent = (name||'U').split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
+  }
+
+  window.doSaveProfile = async function() {
+    showToast('Updating profile is disabled in this MVP.', 'info');
+  };
+
+  window.doChangePassword = async function() {
+    showToast('Changing password is disabled in this MVP.', 'info');
+  };
+</script>
+</body>
+</html>
