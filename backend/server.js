@@ -34,23 +34,6 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '1mb' }));
 
-// Serve static files from the RasoiHub frontend directory.
-// `fallthrough: false` helps us surface missing asset paths cleanly
-// instead of letting them slip into the SPA/document catch-all.
-app.use(express.static(FRONTEND_DIR, { fallthrough: false }));
-
-app.get('/js/:file', (req, res, next) => {
-  res.sendFile(path.join(FRONTEND_DIR, 'js', req.params.file), err => {
-    if (err) next(err);
-  });
-});
-
-app.get('/css/:file', (req, res, next) => {
-  res.sendFile(path.join(FRONTEND_DIR, 'css', req.params.file), err => {
-    if (err) next(err);
-  });
-});
-
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || (!isProduction ? 'dev-only-jwt-secret' : '');
 const MONGO_URI = process.env.MONGO_URI || (!isProduction ? 'mongodb://127.0.0.1:27017/rasoihub' : '');
@@ -363,6 +346,22 @@ app.put('/api/auth/password', authMiddleware, async (req, res) => {
   } catch (err) {
     res.status(500).send('Server Error');
   }
+});
+
+// Serve static files after API routes so non-GET API requests are never
+// intercepted by static middleware in production.
+app.use(express.static(FRONTEND_DIR, { fallthrough: false }));
+
+app.get('/js/:file', (req, res, next) => {
+  res.sendFile(path.join(FRONTEND_DIR, 'js', req.params.file), err => {
+    if (err) next(err);
+  });
+});
+
+app.get('/css/:file', (req, res, next) => {
+  res.sendFile(path.join(FRONTEND_DIR, 'css', req.params.file), err => {
+    if (err) next(err);
+  });
 });
 // Serve known HTML entry points explicitly so direct navigation works.
 app.get('/', (req, res) => {
