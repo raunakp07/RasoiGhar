@@ -34,8 +34,10 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '1mb' }));
 
-// Serve static files from the RasoiHub frontend directory
-app.use(express.static(FRONTEND_DIR));
+// Serve static files from the RasoiHub frontend directory.
+// `fallthrough: false` helps us surface missing asset paths cleanly
+// instead of letting them slip into the SPA/document catch-all.
+app.use(express.static(FRONTEND_DIR, { fallthrough: false }));
 
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || (!isProduction ? 'dev-only-jwt-secret' : '');
@@ -334,9 +336,38 @@ app.put('/api/auth/password', authMiddleware, async (req, res) => {
     res.status(500).send('Server Error');
   }
 });
-// Catch-all route to serve index.html for any unhandled GET requests
-app.get(/^(?!\/api).*/, (req, res) => {
+// Serve known HTML entry points explicitly so direct navigation works.
+app.get('/', (req, res) => {
   res.sendFile(path.join(FRONTEND_DIR, 'index.html'));
+});
+
+app.get('/:page', (req, res, next) => {
+  const page = req.params.page;
+
+  if (!page.endsWith('.html')) {
+    return next();
+  }
+
+  return res.sendFile(path.join(FRONTEND_DIR, page), err => {
+    if (err) next(err);
+  });
+});
+
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
+
+  return res.status(404).send('Not Found');
+});
+
+app.use((err, req, res, next) => {
+  if (err?.status === 404 && !req.path.startsWith('/api')) {
+    return res.status(404).send('Asset not found');
+  }
+
+  console.error('Unhandled server error:', err);
+  return res.status(500).json({ message: 'Internal server error' });
 });
 
 async function startServer() {
