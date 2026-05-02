@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Portal - RasoiHub</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<div class="loader-overlay" id="loader">
+  <div class="loader-logo"><i class="fa-solid fa-utensils"></i> RasoiHub</div>
+  <div class="spinner"></div>
+</div>
+<nav class="navbar" id="navbar">
+  <div class="logo"><i class="fa-solid fa-utensils"></i> RasoiHub Admin</div>
+  <div class="nav-links">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="bookings.html">Bookings</a>
+    <a href="admin.html" class="active">Admin</a>
+    <a href="profile.html">Profile</a>
+    <a href="#" onclick="doLogout()" class="nav-cta">Logout</a>
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle theme">
+      <div class="theme-toggle-thumb" id="themeThumb">MOON</div>
+    </button>
+  </div>
+</nav>
+<div class="page-wrapper">
+  <div class="page-header">
+    <h1>Admin Review Portal</h1>
+    <p>Monitor bookings, check user details, and mark whether reservations look authentic.</p>
+  </div>
+  <div class="page-content">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-users"></i></div><div class="stat-info"><h4>Total Users</h4><div class="stat-value" id="totalUsers">-</div><div class="stat-sub">Registered diners</div></div></div>
+      <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-calendar-check"></i></div><div class="stat-info"><h4>Total Bookings</h4><div class="stat-value" id="totalBookings">-</div><div class="stat-sub">Reservation requests</div></div></div>
+      <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-shield"></i></div><div class="stat-info"><h4>Pending Review</h4><div class="stat-value" id="pendingReview">-</div><div class="stat-sub">Needs authenticity check</div></div></div>
+      <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-flag"></i></div><div class="stat-info"><h4>Flagged</h4><div class="stat-value" id="flaggedCount">-</div><div class="stat-sub">Potentially suspicious</div></div></div>
+    </div>
+    <div class="card" style="margin-top:26px;">
+      <div class="flex items-center justify-between" style="gap:16px;flex-wrap:wrap;margin-bottom:20px;">
+        <h2 style="font-size:1.25rem;">Booking Verification Queue</h2>
+        <button class="btn-secondary btn-sm" onclick="loadAdminData()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+      </div>
+      <div id="adminBookings" style="display:flex;flex-direction:column;gap:16px;"></div>
+    </div>
+  </div>
+</div>
+<script>
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5000/api' : '/api';
+
+function showToast(message, type = 'info', duration = 3500) {
+  let container = document.querySelector('.toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+  const icons = { success: 'fa-circle-check', error: 'fa-circle-xmark', info: 'fa-circle-info' };
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `<i class="fa-solid ${icons[type] || icons.info} toast-icon"></i><span class="toast-text">${message}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add('fade-out');
+    toast.addEventListener('animationend', () => toast.remove());
+  }, duration);
+}
+
+async function apiCall(endpoint, method = 'GET', body = null) {
+  const token = localStorage.getItem('token');
+  const options = { method, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } };
+  if (body) options.body = JSON.stringify(body);
+  const res = await fetch(`${API_URL}${endpoint}`, options);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || 'API Error');
+  }
+  return res.json();
+}
+
+async function requireAdmin(callback) {
+  const token = localStorage.getItem('token');
+  if (!token) return window.location.href = 'login.html';
+  try {
+    const user = await apiCall('/auth/me');
+    if (user.role !== 'admin') {
+      showToast('Admin access required.', 'error');
+      return setTimeout(() => window.location.href = 'dashboard.html', 800);
+    }
+    callback(user);
+  } catch (_) {
+    localStorage.removeItem('token');
+    window.location.href = 'login.html';
+  }
+}
+
+function logout() {
+  localStorage.removeItem('token');
+  window.location.href = 'login.html';
+}
+
+function initNavbar() {
+  const navbar = document.querySelector('.navbar');
+  if (!navbar) return;
+  window.addEventListener('scroll', () => navbar.classList.toggle('scrolled', window.scrollY > 20));
+}
+
+function applyTheme(mode) {
+  const thumb = document.getElementById('themeThumb');
+  document.body.classList.toggle('light-mode', mode === 'light');
+  if (thumb) thumb.textContent = mode === 'light' ? 'SUN' : 'MOON';
+  localStorage.setItem('rasoihub-theme', mode);
+}
+
+function initTheme() {
+  applyTheme(localStorage.getItem('rasoihub-theme') || 'dark');
+  window.toggleTheme = function() { applyTheme(document.body.classList.contains('light-mode') ? 'dark' : 'light'); };
+}
+
+function formatDate(dateStr) {
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+}
+
+function formatTime(timeStr) {
+  const [h, m] = timeStr.split(':');
+  const hr = parseInt(h, 10);
+  return `${hr % 12 || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`;
+}
+
+function reviewButtons(booking) {
+  return `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn-primary btn-sm" onclick="reviewBooking('${booking._id}','Verified','Confirmed')">Verify</button>
+      <button class="btn-secondary btn-sm" onclick="reviewBooking('${booking._id}','Pending Review','Pending')">Keep Pending</button>
+      <button class="btn-danger btn-sm" onclick="reviewBooking('${booking._id}','Flagged','Rejected')">Flag</button>
+    </div>
+  `;
+}
+
+window.reviewBooking = async function(id, authenticityStatus, status) {
+  const adminNotes = window.prompt('Optional admin note for this review:', '');
+  try {
+    await apiCall(`/admin/bookings/${id}/review`, 'PUT', { authenticityStatus, status, adminNotes: adminNotes || '' });
+    showToast('Booking review updated.', 'success');
+    await loadAdminData();
+  } catch (err) {
+    showToast(err.message || 'Could not update review.', 'error');
+  }
+};
+
+async function loadAdminData() {
+  const overview = await apiCall('/admin/overview');
+  const bookings = await apiCall('/admin/bookings');
+  document.getElementById('totalUsers').textContent = overview.totalUsers;
+  document.getElementById('totalBookings').textContent = overview.totalBookings;
+  document.getElementById('pendingReview').textContent = overview.pendingReview;
+  document.getElementById('flaggedCount').textContent = overview.flagged;
+
+  const container = document.getElementById('adminBookings');
+  if (bookings.length === 0) {
+    container.innerHTML = `<div class="empty-state"><i class="fa-solid fa-inbox"></i><h3>No bookings to review</h3><p>New reservations will appear here.</p></div>`;
+    return;
+  }
+
+  container.innerHTML = bookings.map(booking => `
+    <div class="booking-card">
+      <div class="booking-info">
+        <div class="booking-restaurant">${booking.restaurantName}</div>
+        <div class="booking-meta">
+          <div class="booking-meta-item"><i class="fa-solid fa-user"></i> ${booking.user?.name || 'Unknown user'}</div>
+          <div class="booking-meta-item"><i class="fa-solid fa-envelope"></i> ${booking.user?.email || '-'}</div>
+          <div class="booking-meta-item"><i class="fa-solid fa-phone"></i> ${booking.contactPhone || booking.user?.phone || '-'}</div>
+          <div class="booking-meta-item"><i class="fa-solid fa-calendar"></i> ${formatDate(booking.date)}</div>
+          <div class="booking-meta-item"><i class="fa-solid fa-clock"></i> ${formatTime(booking.time)}</div>
+          <div class="booking-meta-item"><i class="fa-solid fa-users"></i> ${booking.guests} guests</div>
+          <div class="booking-meta-item"><i class="fa-solid fa-shield"></i> Authenticity: ${booking.authenticityStatus}</div>
+          <div class="booking-meta-item"><i class="fa-solid fa-info-circle"></i> Booking Status: ${booking.status}</div>
+          ${booking.specialRequests ? `<div class="booking-meta-item"><i class="fa-solid fa-comment"></i> ${booking.specialRequests}</div>` : ''}
+          ${booking.adminNotes ? `<div class="booking-meta-item"><i class="fa-solid fa-note-sticky"></i> ${booking.adminNotes}</div>` : ''}
+        </div>
+      </div>
+      <div class="booking-actions">
+        ${reviewButtons(booking)}
+      </div>
+    </div>
+  `).join('');
+}
+
+initTheme();
+initNavbar();
+window.doLogout = logout;
+requireAdmin(async () => {
+  await loadAdminData();
+  const loader = document.getElementById('loader');
+  loader.classList.add('hidden');
+  setTimeout(() => loader.remove(), 300);
+});
+</script>
+</body>
+</html>

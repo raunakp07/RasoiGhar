@@ -1,92 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bookings - RasoiHub</title>
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places"></script>
-  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-</head>
-<body>
-<div class="loader-overlay" id="loader">
-  <div class="loader-logo"><i class="fa-solid fa-utensils"></i> RasoiHub</div>
-  <div class="spinner"></div>
-</div>
-<nav class="navbar" id="navbar">
-  <div class="logo"><i class="fa-solid fa-utensils"></i> RasoiHub</div>
-  <div class="nav-links">
-    <a href="dashboard.html">Dashboard</a>
-    <a href="bookings.html" class="active">Bookings</a>
-    <a href="admin.html" id="adminNavLink" style="display:none;">Admin</a>
-    <a href="profile.html">Profile</a>
-    <a href="#" onclick="doLogout()" class="nav-cta">Logout</a>
-    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle theme">
-      <div class="theme-toggle-thumb" id="themeThumb">MOON</div>
-    </button>
-  </div>
-</nav>
-<div class="page-wrapper">
-  <div class="page-header">
-    <h1>Book Nearby Restaurants</h1>
-    <p>Share your location, compare nearby restaurants, and create a reservation the admin team can review.</p>
-  </div>
-  <div class="page-content">
-    <div class="form-box" style="margin-bottom:40px;">
-      <div class="flex items-center justify-between" style="gap:16px;flex-wrap:wrap;margin-bottom:22px;">
-        <div>
-          <h2 style="font-size:1.3rem;margin-bottom:8px;">Restaurant Discovery</h2>
-          <p style="color:var(--text-secondary);font-size:0.92rem;">We use your location to suggest restaurants closest to you. You can refresh it anytime.</p>
-        </div>
-        <button class="btn-secondary btn-sm" id="locateBtn" onclick="useMyLocation()"><i class="fa-solid fa-location-crosshairs"></i> Use My Location</button>
-      </div>
-      <div class="card" style="margin-bottom:20px;padding:18px;">
-        <div id="locationStatus" style="color:var(--text-secondary);">Location not detected yet. You can still browse curated restaurants below.</div>
-      </div>
-      <div id="restaurantChoices" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:24px;"></div>
-      <div class="input-group"><i class="fa-solid fa-store icon"></i><select id="restaurantSelect"></select></div>
-      <div class="form-row">
-        <div class="input-group"><i class="fa-solid fa-calendar icon"></i><input type="date" id="bDate"></div>
-        <div class="input-group"><i class="fa-solid fa-clock icon"></i><input type="time" id="bTime"></div>
-      </div>
-      <div class="form-row">
-        <div class="input-group"><i class="fa-solid fa-users icon"></i><input type="number" id="bGuests" placeholder="Number of Guests" min="1" max="100"></div>
-        <div class="input-group"><i class="fa-solid fa-phone icon"></i><input type="tel" id="bPhone" placeholder="Contact Phone"></div>
-      </div>
-      <div class="input-group"><i class="fa-solid fa-comment icon"></i><input type="text" id="bNotes" placeholder="Special requests (optional)" maxlength="200"></div>
-      <button class="btn-primary" id="createBtn" onclick="doCreate()"><i class="fa-solid fa-plus"></i> Request Reservation</button>
-    </div>
-    <div>
-      <div class="flex items-center justify-between" style="margin-bottom:20px;flex-wrap:wrap;gap:12px;">
-        <h2 style="font-size:1.3rem;">Your Bookings</h2>
-        <div class="filter-tabs">
-          <button class="filter-tab active" onclick="doFilter('all',this)">All</button>
-          <button class="filter-tab" onclick="doFilter('pending',this)">Review</button>
-          <button class="filter-tab" onclick="doFilter('upcoming',this)">Upcoming</button>
-          <button class="filter-tab" onclick="doFilter('past',this)">Past</button>
-        </div>
-      </div>
-      <div id="bookingsList" style="display:flex;flex-direction:column;gap:14px;">
-        <div class="skeleton" style="height:90px;border-radius:var(--radius-lg);"></div>
-        <div class="skeleton" style="height:90px;border-radius:var(--radius-lg);"></div>
-      </div>
-    </div>
-  </div>
-</div>
 
-<div class="modal-overlay hidden" id="menuModal" onclick="if(event.target===this) this.classList.add('hidden')">
-  <div class="modal-box" style="max-width: 600px; max-height: 80vh; overflow-y: auto;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
-      <h2 id="menuModalTitle" style="margin:0; font-size:1.8rem;"><i class="fa-solid fa-book-open"></i> Menu</h2>
-      <button onclick="document.getElementById('menuModal').classList.add('hidden')" style="background:none;border:none;color:var(--text-secondary);font-size:1.5rem;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <div id="menuModalContent">
-      <div class="skeleton" style="height:200px;"></div>
-    </div>
-  </div>
-</div>
-
-<script type="module">
 const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5000/api' : '/api';
 const today = new Date().toISOString().split('T')[0];
 let currentUser = null;
@@ -232,7 +144,7 @@ function initPlacesAutocomplete() {
 }
 
 function renderRestaurantChoices() {
-  const wrap = document.getElementById('restaurantChoices');
+  const wrap = document.getElementById('restaurantList');
   const select = document.getElementById('restaurantSelect');
   if (!wrap || !select) return;
 
@@ -355,7 +267,7 @@ window.doFilter = function(filter, btn) {
 
 window.cancelBooking = async function(id) {
   try {
-    await apiCall(`/bookings/${id}`, 'DELETE');
+    await apiCall(`/bookings/${id}`, 'PUT', { status: 'Cancelled' });
     showToast('Booking cancelled.', 'info');
     await loadBookings();
   } catch (err) {
@@ -455,6 +367,3 @@ requireAuth(async user => {
       setTimeout(() => loader.remove(), 300);
   }
 });
-</script>
-</body>
-</html>

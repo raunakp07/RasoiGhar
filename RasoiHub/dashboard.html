@@ -16,6 +16,7 @@
   <div class="nav-links">
     <a href="dashboard.html" class="active">Dashboard</a>
     <a href="bookings.html">Bookings</a>
+    <a href="admin.html" id="adminNavLink" style="display:none;">Admin</a>
     <a href="profile.html">Profile</a>
     <a href="#" onclick="doLogout()" class="nav-cta">Logout</a>
     <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle theme">
@@ -41,6 +42,15 @@
       <div class="stat-card">
         <div class="stat-icon" style="background:rgba(100,180,120,0.1);color:#5ccf7a;"><i class="fa-solid fa-clock"></i></div>
         <div class="stat-info"><h4>Upcoming</h4><div class="stat-value" id="upcomingCount">–</div><div class="stat-sub">Future reservations</div></div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:28px;">
+      <div class="flex items-center justify-between" style="gap:16px;flex-wrap:wrap;">
+        <div>
+          <h2 style="font-size:1.2rem;margin-bottom:8px;">Find Restaurants Near You</h2>
+          <p style="color:var(--text-secondary);max-width:560px;">Open the bookings page to detect your location, browse nearby restaurants, and reserve a table with live verification status.</p>
+        </div>
+        <a href="bookings.html" class="btn-primary btn-sm"><i class="fa-solid fa-location-crosshairs"></i> Explore Nearby</a>
       </div>
     </div>
     <div>
@@ -166,6 +176,7 @@
   requireAuth(async user => {
     document.getElementById('greeting').textContent = getGreeting();
     document.getElementById('userName').textContent = user.name ? user.name.split(' ')[0] : 'there';
+    if (user.role === 'admin') document.getElementById('adminNavLink').style.display = 'inline-flex';
     try {
       const bookings = await apiCall('/bookings', 'GET');
       document.getElementById('totalBookings').textContent = bookings.length;
@@ -178,18 +189,24 @@
       } else {
         listEl.innerHTML = recent.map((b,i) => {
           const up = isUpcoming(b.date);
-          return `<div class="booking-card" style="animation-delay:${i*0.07}s">
-            <div class="booking-info">
-              <div class="booking-restaurant">${b.restaurantName || 'RasoiHub'}</div>
-              <div class="booking-meta">
-                <div class="booking-meta-item"><i class="fa-solid fa-calendar"></i> ${formatDate(b.date)}</div>
-                <div class="booking-meta-item"><i class="fa-solid fa-clock"></i> ${formatTime(b.time)}</div>
-                <div class="booking-meta-item"><i class="fa-solid fa-users"></i> ${b.guests} guest${b.guests==1?'':'s'}</div>
+          const imgId = 100 + ((b.restaurantName||'RasoiHub').length % 50);
+          return `<div class="dash-booking-card" style="animation-delay:${i*0.1}s">
+            <div class="dash-booking-img" style="background-image: url('https://picsum.photos/id/${imgId}/400/300')">
+              <div class="dash-booking-badge ${up ? 'upcoming' : 'past'}">
+                <i class="fa-solid ${up ? 'fa-calendar-check' : 'fa-clock-rotate-left'}"></i> ${up ? 'Upcoming' : 'Past'}
               </div>
             </div>
-            <span class="booking-status ${up?'status-upcoming':'status-past'}">
-              <i class="fa-solid ${up?'fa-circle-check':'fa-circle-xmark'}"></i> ${up?'Upcoming':'Past'}
-            </span>
+            <div class="dash-booking-content">
+              <h3 class="dash-booking-title">${b.restaurantName || 'RasoiHub'}</h3>
+              <div class="dash-booking-details">
+                <span><i class="fa-regular fa-calendar"></i> ${formatDate(b.date)}</span>
+                <span><i class="fa-regular fa-clock"></i> ${formatTime(b.time)}</span>
+                <span><i class="fa-solid fa-user-group"></i> ${b.guests} Guest${b.guests===1?'':'s'}</span>
+              </div>
+              <div class="dash-booking-actions">
+                ${up ? `<a href="bookings.html" class="btn-secondary btn-sm"><i class="fa-solid fa-pen"></i> Modify</a>` : `<button disabled class="btn-secondary btn-sm" style="opacity:0.5;cursor:not-allowed;"><i class="fa-solid fa-check-double"></i> Completed</button>`}
+              </div>
+            </div>
           </div>`;
         }).join('');
       }

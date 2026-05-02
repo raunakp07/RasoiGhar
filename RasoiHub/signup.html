@@ -19,6 +19,7 @@
     <p class="auth-subtitle">Join RasoiHub and start booking tables effortlessly</p>
     <div class="input-group"><i class="fa-solid fa-user icon"></i><input type="text" id="signupName" placeholder="Full Name" autocomplete="name"></div>
     <div class="input-group"><i class="fa-solid fa-envelope icon"></i><input type="email" id="signupEmail" placeholder="Email Address" autocomplete="email"></div>
+    <div class="input-group"><i class="fa-solid fa-phone icon"></i><input type="tel" id="signupPhone" placeholder="Phone Number" autocomplete="tel"></div>
     <div class="input-group"><i class="fa-solid fa-lock icon"></i><input type="password" id="signupPassword" placeholder="Password (min 6 chars)"></div>
     <div class="input-group"><i class="fa-solid fa-lock icon"></i><input type="password" id="signupConfirm" placeholder="Confirm Password"></div>
     <button class="btn-primary w-full mt-8" id="signupBtn" onclick="doSignup()">
@@ -100,16 +101,17 @@
   window.doSignup = async function() {
     const name    = document.getElementById('signupName').value.trim();
     const email   = document.getElementById('signupEmail').value.trim();
+    const phone   = document.getElementById('signupPhone').value.trim();
     const pass    = document.getElementById('signupPassword').value;
     const confirm = document.getElementById('signupConfirm').value;
     const btn     = document.getElementById('signupBtn');
-    if (!name || !email || !pass || !confirm) return showToast('Please fill in all fields.', 'error');
+    if (!name || !email || !phone || !pass || !confirm) return showToast('Please fill in all fields.', 'error');
     if (pass.length < 6)  return showToast('Password must be at least 6 characters.', 'error');
     if (pass !== confirm) return showToast('Passwords do not match.', 'error');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner" style="width:18px;height:18px;border-width:2px;display:inline-block;"></span> Creating…';
     try {
-      const res = await apiCall('/auth/register', 'POST', { name, email, password: pass });
+      const res = await apiCall('/auth/register', 'POST', { name, email, phone, password: pass });
       localStorage.setItem('token', res.token);
       showToast('Account created! Redirecting…', 'success');
       setTimeout(() => window.location.href = 'dashboard.html', 1200);

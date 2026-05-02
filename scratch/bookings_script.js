@@ -1,92 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bookings - RasoiHub</title>
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places"></script>
-  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-</head>
-<body>
-<div class="loader-overlay" id="loader">
-  <div class="loader-logo"><i class="fa-solid fa-utensils"></i> RasoiHub</div>
-  <div class="spinner"></div>
-</div>
-<nav class="navbar" id="navbar">
-  <div class="logo"><i class="fa-solid fa-utensils"></i> RasoiHub</div>
-  <div class="nav-links">
-    <a href="dashboard.html">Dashboard</a>
-    <a href="bookings.html" class="active">Bookings</a>
-    <a href="admin.html" id="adminNavLink" style="display:none;">Admin</a>
-    <a href="profile.html">Profile</a>
-    <a href="#" onclick="doLogout()" class="nav-cta">Logout</a>
-    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle theme">
-      <div class="theme-toggle-thumb" id="themeThumb">MOON</div>
-    </button>
-  </div>
-</nav>
-<div class="page-wrapper">
-  <div class="page-header">
-    <h1>Book Nearby Restaurants</h1>
-    <p>Share your location, compare nearby restaurants, and create a reservation the admin team can review.</p>
-  </div>
-  <div class="page-content">
-    <div class="form-box" style="margin-bottom:40px;">
-      <div class="flex items-center justify-between" style="gap:16px;flex-wrap:wrap;margin-bottom:22px;">
-        <div>
-          <h2 style="font-size:1.3rem;margin-bottom:8px;">Restaurant Discovery</h2>
-          <p style="color:var(--text-secondary);font-size:0.92rem;">We use your location to suggest restaurants closest to you. You can refresh it anytime.</p>
-        </div>
-        <button class="btn-secondary btn-sm" id="locateBtn" onclick="useMyLocation()"><i class="fa-solid fa-location-crosshairs"></i> Use My Location</button>
-      </div>
-      <div class="card" style="margin-bottom:20px;padding:18px;">
-        <div id="locationStatus" style="color:var(--text-secondary);">Location not detected yet. You can still browse curated restaurants below.</div>
-      </div>
-      <div id="restaurantChoices" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:24px;"></div>
-      <div class="input-group"><i class="fa-solid fa-store icon"></i><select id="restaurantSelect"></select></div>
-      <div class="form-row">
-        <div class="input-group"><i class="fa-solid fa-calendar icon"></i><input type="date" id="bDate"></div>
-        <div class="input-group"><i class="fa-solid fa-clock icon"></i><input type="time" id="bTime"></div>
-      </div>
-      <div class="form-row">
-        <div class="input-group"><i class="fa-solid fa-users icon"></i><input type="number" id="bGuests" placeholder="Number of Guests" min="1" max="100"></div>
-        <div class="input-group"><i class="fa-solid fa-phone icon"></i><input type="tel" id="bPhone" placeholder="Contact Phone"></div>
-      </div>
-      <div class="input-group"><i class="fa-solid fa-comment icon"></i><input type="text" id="bNotes" placeholder="Special requests (optional)" maxlength="200"></div>
-      <button class="btn-primary" id="createBtn" onclick="doCreate()"><i class="fa-solid fa-plus"></i> Request Reservation</button>
-    </div>
-    <div>
-      <div class="flex items-center justify-between" style="margin-bottom:20px;flex-wrap:wrap;gap:12px;">
-        <h2 style="font-size:1.3rem;">Your Bookings</h2>
-        <div class="filter-tabs">
-          <button class="filter-tab active" onclick="doFilter('all',this)">All</button>
-          <button class="filter-tab" onclick="doFilter('pending',this)">Review</button>
-          <button class="filter-tab" onclick="doFilter('upcoming',this)">Upcoming</button>
-          <button class="filter-tab" onclick="doFilter('past',this)">Past</button>
-        </div>
-      </div>
-      <div id="bookingsList" style="display:flex;flex-direction:column;gap:14px;">
-        <div class="skeleton" style="height:90px;border-radius:var(--radius-lg);"></div>
-        <div class="skeleton" style="height:90px;border-radius:var(--radius-lg);"></div>
-      </div>
-    </div>
-  </div>
-</div>
 
-<div class="modal-overlay hidden" id="menuModal" onclick="if(event.target===this) this.classList.add('hidden')">
-  <div class="modal-box" style="max-width: 600px; max-height: 80vh; overflow-y: auto;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
-      <h2 id="menuModalTitle" style="margin:0; font-size:1.8rem;"><i class="fa-solid fa-book-open"></i> Menu</h2>
-      <button onclick="document.getElementById('menuModal').classList.add('hidden')" style="background:none;border:none;color:var(--text-secondary);font-size:1.5rem;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <div id="menuModalContent">
-      <div class="skeleton" style="height:200px;"></div>
-    </div>
-  </div>
-</div>
-
-<script type="module">
 const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5000/api' : '/api';
 const today = new Date().toISOString().split('T')[0];
 let currentUser = null;
@@ -144,15 +56,10 @@ function logout() {
   window.location.href = 'login.html';
 }
 
-import { initNavbar as origInitNavbar, initTheme as origInitTheme } from './js/firebase.js';
-
-function initTheme() {
-  origInitTheme();
-}
-
 function initNavbar() {
-  origInitNavbar();
-  setTimeout(initPlacesAutocomplete, 1000);
+  const navbar = document.querySelector('.navbar');
+  if (!navbar) return;
+  window.addEventListener('scroll', () => navbar.classList.toggle('scrolled', window.scrollY > 20));
 }
 
 function setActiveNav() {
@@ -160,6 +67,20 @@ function setActiveNav() {
   document.querySelectorAll('.nav-links a').forEach(link => {
     if (link.getAttribute('href') === current) link.classList.add('active');
   });
+}
+
+function applyTheme(mode) {
+  const thumb = document.getElementById('themeThumb');
+  document.body.classList.toggle('light-mode', mode === 'light');
+  if (thumb) thumb.textContent = mode === 'light' ? 'SUN' : 'MOON';
+  localStorage.setItem('rasoihub-theme', mode);
+}
+
+function initTheme() {
+  applyTheme(localStorage.getItem('rasoihub-theme') || 'dark');
+  window.toggleTheme = function() {
+    applyTheme(document.body.classList.contains('light-mode') ? 'dark' : 'light');
+  };
 }
 
 function formatDate(dateStr) {
@@ -182,57 +103,8 @@ function badgeTone(authStatus) {
   return '';
 }
 
-window.showMenu = function(restaurantId) {
-  const restaurant = restaurants.find(r => r._id === restaurantId);
-  if (!restaurant) return;
-  document.getElementById('menuModalTitle').innerHTML = `<i class="fa-solid fa-book-open"></i> ${restaurant.name} Menu`;
-  const modal = document.getElementById('menuModal');
-  const content = document.getElementById('menuModalContent');
-  
-  if (restaurant.menuItems && restaurant.menuItems.length > 0) {
-    const categories = [...new Set(restaurant.menuItems.map(m => m.category))];
-    content.innerHTML = categories.map(cat => {
-      const items = restaurant.menuItems.filter(m => m.category === cat);
-      return `
-        <h3 style="margin-top: 24px; margin-bottom: 12px; color: var(--amber); border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">${cat}</h3>
-        <div style="display:flex; flex-direction:column; gap: 16px;">
-          ${items.map(m => `
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; background: var(--bg-elevated); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
-              <div>
-                <div style="font-weight:600; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
-                  <i class="fa-solid fa-square-caret-${m.isVeg ? 'up' : 'down'}" style="color:${m.isVeg ? '#22c55e' : '#ef4444'};"></i> ${m.name}
-                </div>
-                <div style="color:var(--text-secondary); font-size:0.85rem; margin-top:4px;">${m.description || ''}</div>
-              </div>
-              <div style="font-weight:700; color:var(--text-primary);">₹${m.price}</div>
-            </div>
-          `).join('')}
-        </div>
-      `;
-    }).join('');
-  } else {
-    content.innerHTML = `<div class="empty-state"><i class="fa-solid fa-book-journal-whills"></i><h3>Menu not available</h3><p>This restaurant hasn't uploaded their menu yet.</p></div>`;
-  }
-  modal.classList.remove('hidden');
-};
-
-function initPlacesAutocomplete() {
-  const input = document.getElementById('placesSearch');
-  if (!input || typeof google === 'undefined' || !google.maps || !google.maps.places) return;
-  const autocomplete = new google.maps.places.Autocomplete(input, { types: ['geocode'] });
-  autocomplete.addListener('place_changed', async () => {
-    const place = autocomplete.getPlace();
-    if (!place.geometry) return showToast('Location not found.', 'error');
-    const lat = place.geometry.location.lat();
-    const lng = place.geometry.location.lng();
-    locationSnapshot = { lat, lng };
-    document.getElementById('locationStatus').textContent = `Showing restaurants near: ${place.formatted_address}`;
-    await loadRestaurants(lat, lng);
-  });
-}
-
 function renderRestaurantChoices() {
-  const wrap = document.getElementById('restaurantChoices');
+  const wrap = document.getElementById('restaurantList');
   const select = document.getElementById('restaurantSelect');
   if (!wrap || !select) return;
 
@@ -274,6 +146,90 @@ function renderRestaurantChoices() {
 
   select.innerHTML = restaurants.map(restaurant => `<option value="${restaurant._id}">${restaurant.name}   ${restaurant.city}${restaurant.distanceKm != null ? `   ${restaurant.distanceKm} km` : ''}</option>`).join('');
 }
+
+  if (!select.value) select.value = restaurants[0]._id;
+
+  wrap.innerHTML = restaurants.map(restaurant => `
+    <button type="button" class="card" onclick="selectRestaurant('${restaurant._id}')" style="text-align:left;padding:18px;border:${restaurant._id === select.value ? '1px solid var(--amber)' : '1px solid var(--border)'};">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+        <div>
+          <div style="font-weight:700;font-size:1rem;margin-bottom:4px;">${restaurant.name}</div>
+          <div style="color:var(--text-secondary);font-size:0.88rem;">${restaurant.cuisine} � ${restaurant.city}</div>
+        </div>
+        <div style="font-size:0.8rem;color:var(--amber);white-space:nowrap;">${restaurant.distanceKm != null ? `${restaurant.distanceKm} km` : 'Top pick'}</div>
+      </div>
+      <div style="margin-top:10px;color:var(--text-secondary);font-size:0.88rem;">${restaurant.address}</div>
+      <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;font-size:0.82rem;color:var(--text-secondary);">
+        <span><i class="fa-solid fa-star"></i> ${restaurant.rating}</span>
+        <span><i class="fa-solid fa-indian-rupee-sign"></i> ${restaurant.averageCost} avg.</span>
+        <span><i class="fa-solid fa-user-check"></i> ${restaurant.verificationRequired ? 'Manual review' : 'Quick confirm'}</span>
+      </div>
+      <div style="margin-top: 16px;">
+        <button type="button" class="btn-secondary btn-sm" onclick="event.stopPropagation(); showMenu('${restaurant._id}')" style="font-size:0.8rem; padding: 6px 16px;"><i class="fa-solid fa-book-open"></i> View Menu</button>
+      </div>
+    </button>
+  `).join('');
+
+  select.innerHTML = restaurants.map(restaurant => `<option value="${restaurant._id}">${restaurant.name} � ${restaurant.city}${restaurant.distanceKm != null ? ` � ${restaurant.distanceKm} km` : ''}</option>`).join('');
+}
+
+
+window.showMenu = function(restaurantId) {
+  const restaurant = restaurants.find(r => r._id === restaurantId);
+  if (!restaurant) return;
+  document.getElementById('menuModalTitle').innerHTML = `<i class="fa-solid fa-book-open"></i> ${restaurant.name} Menu`;
+  const modal = document.getElementById('menuModal');
+  const content = document.getElementById('menuModalContent');
+  
+  if (restaurant.menuItems && restaurant.menuItems.length > 0) {
+    const categories = [...new Set(restaurant.menuItems.map(m => m.category))];
+    content.innerHTML = categories.map(cat => {
+      const items = restaurant.menuItems.filter(m => m.category === cat);
+      return `
+        <h3 style="margin-top: 24px; margin-bottom: 12px; color: var(--amber); border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">${cat}</h3>
+        <div style="display:flex; flex-direction:column; gap: 16px;">
+          ${items.map(m => `
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; background: var(--bg-elevated); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <div>
+                <div style="font-weight:600; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+                  <i class="fa-solid fa-square-caret-${m.isVeg ? 'up' : 'down'}" style="color:${m.isVeg ? '#22c55e' : '#ef4444'};"></i> ${m.name}
+                </div>
+                <div style="color:var(--text-secondary); font-size:0.85rem; margin-top:4px;">${m.description || ''}</div>
+              </div>
+              <div style="font-weight:700; color:var(--text-primary);">₹${m.price}</div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }).join('');
+  } else {
+    content.innerHTML = `<div class="empty-state"><i class="fa-solid fa-book-journal-whills"></i><h3>Menu not available</h3><p>This restaurant hasn't uploaded their menu yet.</p></div>`;
+  }
+  
+  modal.classList.remove('hidden');
+};
+
+function initPlacesAutocomplete() {
+  const input = document.getElementById('placesSearch');
+  if (!input || typeof google === 'undefined' || !google.maps || !google.maps.places) return;
+  const autocomplete = new google.maps.places.Autocomplete(input, { types: ['geocode'] });
+  autocomplete.addListener('place_changed', async () => {
+    const place = autocomplete.getPlace();
+    if (!place.geometry) return showToast('Location not found.', 'error');
+    const lat = place.geometry.location.lat();
+    const lng = place.geometry.location.lng();
+    locationSnapshot = { lat, lng };
+    document.getElementById('locationStatus').textContent = `Showing restaurants near: ${place.formatted_address}`;
+    await loadRestaurants(lat, lng);
+  });
+}
+
+// Overwrite initTheme to also call initPlacesAutocomplete after load
+const originalInitNavbar = initNavbar;
+initNavbar = function() {
+  originalInitNavbar();
+  setTimeout(initPlacesAutocomplete, 1000);
+};
 
 window.selectRestaurant = function(id) {
   document.getElementById('restaurantSelect').value = id;
@@ -355,7 +311,7 @@ window.doFilter = function(filter, btn) {
 
 window.cancelBooking = async function(id) {
   try {
-    await apiCall(`/bookings/${id}`, 'DELETE');
+    await apiCall(`/bookings/${id}`, 'PUT', { status: 'Cancelled' });
     showToast('Booking cancelled.', 'info');
     await loadBookings();
   } catch (err) {
@@ -379,8 +335,10 @@ window.doCreate = async function() {
   btn.innerHTML = '<span class="spinner" style="width:18px;height:18px;border-width:2px;display:inline-block;"></span> Processing Deposit...';
   
   try {
+    // 1. Create Order on Backend
     const orderData = await apiCall('/bookings/order', 'POST', { restaurantId, date, time, guests, contactPhone, specialRequests, locationSnapshot });
     
+    // 2. Open Razorpay Checkout Modal
     const options = {
       key: orderData.key_id,
       amount: orderData.order.amount,
@@ -390,6 +348,7 @@ window.doCreate = async function() {
       image: "https://cdn-icons-png.flaticon.com/512/1046/1046784.png",
       order_id: orderData.order.id,
       handler: async function (response) {
+        // 3. Verify Payment
         try {
           btn.innerHTML = '<span class="spinner" style="width:18px;height:18px;border-width:2px;display:inline-block;"></span> Verifying...';
           const verifyData = await apiCall('/bookings/verify', 'POST', {
@@ -415,7 +374,9 @@ window.doCreate = async function() {
         name: currentUser ? currentUser.name : "Guest",
         contact: contactPhone
       },
-      theme: { color: "#ff6b00" },
+      theme: {
+        color: "#ff6b00"
+      },
       modal: {
         ondismiss: function() {
           showToast('Payment cancelled.', 'info');
@@ -432,6 +393,7 @@ window.doCreate = async function() {
         btn.innerHTML = '<i class="fa-solid fa-plus"></i> Request Reservation';
     });
     rzp1.open();
+    
   } catch (err) {
     showToast(err.message || 'Could not initiate payment.', 'error');
     btn.disabled = false;
@@ -450,11 +412,6 @@ requireAuth(async user => {
   document.getElementById('bPhone').value = user.phone || '';
   await Promise.all([loadRestaurants(), loadBookings()]);
   const loader = document.getElementById('loader');
-  if(loader) {
-      loader.classList.add('hidden');
-      setTimeout(() => loader.remove(), 300);
-  }
+  loader.classList.add('hidden');
+  setTimeout(() => loader.remove(), 300);
 });
-</script>
-</body>
-</html>

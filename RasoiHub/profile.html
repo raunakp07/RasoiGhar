@@ -16,6 +16,7 @@
   <div class="nav-links">
     <a href="dashboard.html">Dashboard</a>
     <a href="bookings.html">Bookings</a>
+    <a href="admin.html" id="adminNavLink" style="display:none;">Admin</a>
     <a href="profile.html" class="active">Profile</a>
     <a href="#" onclick="doLogout()" class="nav-cta">Logout</a>
     <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle theme">
@@ -43,6 +44,7 @@
           <h2>Account Information</h2>
           <div class="input-group no-icon"><label>Full Name</label><input type="text" id="pName" placeholder="Your full name"></div>
           <div class="input-group no-icon"><label>Email Address</label><input type="email" id="pEmail" disabled style="opacity:0.5;cursor:not-allowed;"></div>
+          <div class="input-group no-icon"><label>Phone Number</label><input type="tel" id="pPhone" placeholder="Your contact number"></div>
           <p style="color:var(--text-muted);font-size:0.82rem;margin-bottom:20px;"><i class="fa-solid fa-info-circle"></i> Email cannot be changed.</p>
           <button class="btn-primary" id="saveBtn" onclick="doSaveProfile()"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
         </div>
@@ -166,7 +168,9 @@
     currentUser = user;
     document.getElementById('pName').value  = user.name || '';
     document.getElementById('pEmail').value = user.email || '';
+    document.getElementById('pPhone').value = user.phone || '';
     document.getElementById('sidebarEmail').textContent = user.email || '–';
+    if (user.role === 'admin') document.getElementById('adminNavLink').style.display = 'inline-flex';
     updateSidebar(user.name || user.email);
     const c = user.createdAt || Date.now();
     if (c) document.getElementById('memberSince').textContent = new Date(c).toLocaleDateString('en-IN',{month:'short',year:'numeric'});
@@ -187,15 +191,17 @@
 
   window.doSaveProfile = async function() {
     const name = document.getElementById('pName').value.trim();
+    const phone = document.getElementById('pPhone').value.trim();
     const btn = document.getElementById('saveBtn');
     if (!name) return showToast('Please enter your name.', 'error');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner" style="width:18px;height:18px;border-width:2px;display:inline-block;"></span> Saving...';
     try {
-      const updatedUser = await apiCall('/auth/me', 'PUT', { name });
+      const updatedUser = await apiCall('/auth/me', 'PUT', { name, phone });
       currentUser = updatedUser;
       updateSidebar(updatedUser.name || updatedUser.email);
       document.getElementById('pName').value = updatedUser.name || '';
+      document.getElementById('pPhone').value = updatedUser.phone || '';
       showToast('Profile updated successfully.', 'success');
     } catch (err) {
       showToast(err.message || 'Could not update profile.', 'error');
